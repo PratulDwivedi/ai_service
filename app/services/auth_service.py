@@ -71,9 +71,26 @@ async def profile(access_token: str) -> Optional[dict]:
             profile_url,
             json={},
             headers=headers,
+            raise_for_status=False
         )
 
-        return response
+        # response is an httpx.Response here
+        status_code = response.status_code
+        try:
+            body_json = response.json()
+        except Exception:
+            body_json = {"text": response.text}
+
+        if status_code >= 400:
+            # Return Supabase's error payload where possible
+            return {
+                "is_success": False,
+                "status_code": status_code,
+                "message": "error when getting profile",
+                "data": body_json,
+            }
+
+        return body_json
 
     except Exception:
         # Return None on any error (invalid token, network error, etc.)

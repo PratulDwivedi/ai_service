@@ -3,7 +3,7 @@ from app.schemas import user as user_schemas
 from app.services import auth_service
 from app.core.auth import get_access_token
 
-router = APIRouter()
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/signup")
 async def signup(user: user_schemas.UserCreate):
