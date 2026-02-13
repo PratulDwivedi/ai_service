@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+supabase
+pydantic[email]
+pydantic-settings
+email-validator
+
+# add additional dependencies and pin versions as needed
