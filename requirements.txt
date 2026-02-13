@@ -6,5 +6,7 @@ supabase
 pydantic[email]
 pydantic-settings
 email-validator
+httpx
 
 # add additional dependencies and pin versions as needed
+

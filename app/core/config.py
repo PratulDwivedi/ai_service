@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     app_name: str
     debug: bool = False
 
-    database_url: str
     supabase_url: str
     supabase_key: str
 
