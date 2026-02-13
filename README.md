@@ -9,8 +9,8 @@ This project is a production‑grade FastAPI template with:
 
 ## Prerequisites
 
-* Python 3.9+ installed
-* `python3`, `pip3` available in PATH
+* Python 3.11.14+ installed
+* `python`, `pip` available in PATH
 * (Optional) virtual environment tool such as `venv` or `virtualenv`
 
 ## Setup on a new machine
@@ -30,8 +30,8 @@ This project is a production‑grade FastAPI template with:
 
 3. **Install dependencies**
    ```bash
-   pip3 install --upgrade pip
-   pip3 install -r requirements.txt
+   pip install --upgrade pip
+   pip install -r requirements.txt
    ```
 
 4. **Copy and edit environment file**
