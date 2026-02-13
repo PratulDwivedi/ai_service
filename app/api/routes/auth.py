@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas import user as user_schemas
 from app.services import auth_service
+from app.core.auth import get_access_token
 
 router = APIRouter()
 
@@ -9,7 +10,9 @@ def signup(user: user_schemas.UserCreate):
     return auth_service.register_user(user)
 
 @router.post("/token")
-async def login(form_data: user_schemas.UserLogin):
+async def token(form_data: user_schemas.UserLogin):
+    """Get the token to call API."""
+
     token = await auth_service.token(form_data)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -17,13 +20,8 @@ async def login(form_data: user_schemas.UserLogin):
 
 
 @router.get("/profile")
-async def profile(authorization: str = Header(None)):
+async def profile(token: str = Depends(get_access_token)):
     """Return the user profile by forwarding the bearer token to the service."""
-    if not authorization:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Authorization header")
-
-    # Expect header like: "Bearer <token>"
-    token = authorization.split(" ", 1)[1] if " " in authorization else authorization
 
     profile_data = await auth_service.profile(token)
     if not profile_data:
