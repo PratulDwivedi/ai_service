@@ -49,6 +49,7 @@ class HTTPClient:
         json: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
+        raise_for_status: bool = True,
     ) -> Dict[str, Any]:
         """
         Perform a POST request.
@@ -70,8 +71,10 @@ class HTTPClient:
                 params=params,
                 timeout=self.timeout,
             )
-            response.raise_for_status()
-            return response.json()
+            if raise_for_status:
+                response.raise_for_status()
+                return response.json()
+            return response
 
     async def put(
         self,

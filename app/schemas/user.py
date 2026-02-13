@@ -15,6 +15,6 @@ class UserLogin(BaseModel):
 
 
 class UserOut(UserBase):
-    id: int
+    id: str
     class Config:
         orm_mode = True

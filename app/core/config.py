@@ -1,9 +1,7 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
-
 
 class Settings(BaseSettings):
     environment: str = ENVIRONMENT

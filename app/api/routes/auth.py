@@ -5,9 +5,9 @@ from app.core.auth import get_access_token
 
 router = APIRouter()
 
-@router.post("/signup", response_model=user_schemas.UserOut)
-def signup(user: user_schemas.UserCreate):
-    return auth_service.register_user(user)
+@router.post("/signup")
+async def signup(user: user_schemas.UserCreate):
+    return await auth_service.register_user(user)
 
 @router.post("/token")
 async def token(form_data: user_schemas.UserLogin):

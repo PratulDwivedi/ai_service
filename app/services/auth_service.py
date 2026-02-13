@@ -1,23 +1,9 @@
 from typing import Optional
-
-from app.core import security
 from app.core.config import settings
 from app.core.http import http_client
+from app.core.auth import build_auth_headers
 from app.schemas import user as user_schemas
-from app.db.supabase import get_supabase_client
-
-
-# simple service interacting with supabase users table (used for signup)
-supabase = get_supabase_client()
-
-
-def register_user(user: user_schemas.UserCreate) -> user_schemas.UserOut:
-    hashed = security.get_password_hash(user.password)
-    data = {"email": user.email, "hashed_password": hashed}
-    response = supabase.table("users").insert(data).execute()
-    record = response.data[0]
-    return user_schemas.UserOut(id=record.get("id"), email=record.get("email"))
-
+import httpx
 
 async def token(form_data: user_schemas.UserLogin) -> Optional[str]:
     """
@@ -37,10 +23,7 @@ async def token(form_data: user_schemas.UserLogin) -> Optional[str]:
         auth_url = f"{settings.supabase_url}/auth/v1/token"
         
         # Set required headers with API key
-        headers = {
-            "apikey": settings.supabase_key,
-            "Content-Type": "application/json",
-        }
+        headers = build_auth_headers()
         
         # Prepare request body
         body = {
@@ -81,11 +64,7 @@ async def profile(access_token: str) -> Optional[dict]:
         profile_url = f"{settings.supabase_url}/rest/v1/rpc/fn_get_user_profile"
 
         # Set required headers with API key and Authorization
-        headers = {
-            "apikey": settings.supabase_key,
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-        }
+        headers = build_auth_headers(access_token)
 
         # Call the RPC endpoint (POST with empty JSON body)
         response = await http_client.post(
@@ -99,3 +78,65 @@ async def profile(access_token: str) -> Optional[dict]:
     except Exception:
         # Return None on any error (invalid token, network error, etc.)
         return None
+
+
+async def register_user(user: user_schemas.UserCreate) -> Optional[dict]:
+    """Create a new user using Supabase Auth REST API."""
+    
+    try:
+        auth_url = f"{settings.supabase_url}/auth/v1/signup"
+
+        body = {
+            "email": user.email,
+            "password": user.password,
+        }
+
+        headers = build_auth_headers()
+
+        # request but do not raise on non-2xx so we can inspect Supabase error body
+        response = await http_client.post(
+            auth_url,
+            json=body,
+            headers=headers,
+            raise_for_status=False
+        )
+
+        # response is an httpx.Response here
+        status_code = response.status_code
+        try:
+            body_json = response.json()
+        except Exception:
+            body_json = {"text": response.text}
+
+        if status_code >= 400:
+            # Return Supabase's error payload where possible
+            return {
+                "is_success": False,
+                "status_code": status_code,
+                "message": "error when creating user",
+                "data": body_json,
+            }
+
+        return {
+                "is_success": True, 
+                "status_code": status_code, 
+                "data": body_json, 
+                "message": "user created successfully"}
+
+    except httpx.RequestError as e:
+        # Network-level error
+        return {
+            "is_success": False,
+            "message": "Network error",
+            "status_code": 400,
+            "data": str(e)
+        }
+
+    except Exception as e:
+        # Unexpected error
+        return {
+            "is_success": False,
+            "message": "Unexpected error",
+            "status_code": 400,
+            "data": str(e)
+        }
