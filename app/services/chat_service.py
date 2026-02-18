@@ -139,10 +139,18 @@ class ChatService:
                     "message": "Query execution failed"
                 }
             
+            # Convert raw results to natural language using OpenAI
+            natural_language_response = await self._convert_results_to_natural_language(
+                user_message,
+                sql_query,
+                result
+            )
+            
             return {
                 "is_success": True,
+                "message": natural_language_response,
                 "query": sql_query,
-                "result": result,
+                "data": result.get("data", []),
                 "count": len(result.get("data", []))
             }
         except Exception as e:
@@ -218,6 +226,96 @@ Return ONLY the SQL query without any markdown formatting or explanation. The qu
         except Exception as e:
             # Fallback to simple SQL generation
             return self._simple_sql_fallback(user_message, table_name, schema)
+    
+    async def _convert_results_to_natural_language(
+        self,
+        user_message: str,
+        sql_query: str,
+        result: Dict[str, Any]
+    ) -> str:
+        """
+        Convert database query results to natural language using OpenAI.
+        
+        Args:
+            user_message: Original user question
+            sql_query: SQL query that was executed
+            result: Query results from DuckDB
+            
+        Returns:
+            Natural language response
+        """
+        try:
+            # Format the results for the prompt
+            data = result.get("data", [])
+            
+            if not data:
+                return "No results found for your query."
+            
+            # Limit data to avoid token issues
+            sample_data = data[:10] if len(data) > 10 else data
+            results_json = json.dumps(sample_data, indent=2, default=str)
+            
+            prompt = f"""You are a helpful data analyst. A user asked: "{user_message}"
+
+The SQL query executed was: {sql_query}
+
+The query returned {len(data)} results. Here are the first results:
+{results_json}
+
+Please provide a clear, natural language summary of these results that directly answers the user's question. Be concise and focus on the key insights."""
+            
+            # Call OpenAI API
+            response = await http_client.post(
+                "https://api.openai.com/v1/chat/completions",
+                json={
+                    "model": "gpt-3.5-turbo",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                    "max_tokens": 500
+                },
+                headers={
+                    "Authorization": f"Bearer {settings.openai_api_key}",
+                    "Content-Type": "application/json"
+                },
+                raise_for_status=False
+            )
+            
+            if response.status_code >= 400:
+                # Fallback: simple summary
+                return self._simple_result_summary(user_message, data)
+            
+            response_data = response.json()
+            
+            if "choices" in response_data and len(response_data["choices"]) > 0:
+                message = response_data["choices"][0]["message"]["content"].strip()
+                return message
+            
+            return self._simple_result_summary(user_message, data)
+        except Exception as e:
+            # Fallback to simple summary
+            return self._simple_result_summary(user_message, result.get("data", []))
+    
+    def _simple_result_summary(self, user_message: str, data: list) -> str:
+        """
+        Simple fallback summary when OpenAI is not available.
+        
+        Args:
+            user_message: User's original question
+            data: Query results
+            
+        Returns:
+            Simple text summary
+        """
+        if not data:
+            return "No results found."
+        
+        if "count" in user_message.lower() or "how many" in user_message.lower():
+            return f"Found {len(data)} record(s) matching your criteria."
+        
+        if len(data) == 1:
+            return f"Found 1 record: {json.dumps(data[0], indent=2, default=str)[:200]}..."
+        
+        return f"Found {len(data)} records. Showing first few:\n\n{json.dumps(data[:3], indent=2, default=str)}"
     
     def _simple_sql_fallback(
         self,
