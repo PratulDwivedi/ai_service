@@ -352,6 +352,96 @@ Please provide a clear, natural language summary of these results that directly 
         # Default: all records with limit
         return f"SELECT * FROM {table_name} LIMIT 50"
 
+    async def chat_stream(self, table_name: str, user_message: str):
+        """
+        Stream a natural-language response from the LLM using Server-Sent Events (SSE).
+
+        Yields SSE `data:` chunks as strings. The final chunk will contain a JSON object
+        with `done: true` and the final message + payload.
+        """
+        try:
+            # Convert to SQL
+            sql_query = await self._convert_to_sql(user_message, table_name, self.db.get_table_schema(table_name))
+            if not sql_query:
+                yield f"data: {json.dumps({'error': 'Could not convert to SQL'})}\n\n"
+                return
+
+            # Execute DB query
+            result = self.db.query_table(sql_query) or {"data": []}
+
+            # Prepare prompt for LLM streaming
+            data_sample = result.get("data", [])[:10]
+            results_json = json.dumps(data_sample, default=str)
+            prompt = f"""You are a helpful data analyst. A user asked: \"{user_message}\"\n
+The SQL executed was:\n{sql_query}\n
+Here are the first results:\n{results_json}\n
+Stream a concise answer that directly addresses the user's question. Yield partial text as it becomes available."""
+
+            # Stream from OpenAI (httpx streaming via http_client)
+            url = "https://api.openai.com/v1/chat/completions"
+            payload = {
+                "model": "gpt-3.5-turbo",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.6,
+                "stream": True
+            }
+
+            headers = {
+                "Authorization": f"Bearer {settings.openai_api_key}",
+                "Content-Type": "application/json"
+            }
+
+            try:
+                async with http_client.stream("POST", url, json=payload, headers=headers, timeout=60.0) as resp:
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        # OpenAI streaming lines are like: data: {json}
+                        raw = line.strip()
+                        if raw.startswith("data: "):
+                            raw = raw[len("data: "):]
+                        if raw == "[DONE]":
+                            break
+                        try:
+                            obj = json.loads(raw)
+                            delta = "".join([c.get("delta", {}).get("content", "") for c in obj.get("choices", []) if c.get("delta")])
+                        except Exception:
+                            delta = raw
+
+                        if delta:
+                            # Send SSE chunk with partial text
+                            yield f"data: {json.dumps({'partial': delta})}\n\n"
+
+            except Exception:
+                # If streaming fails, fallback to non-stream summary
+                final = await self._convert_results_to_natural_language(user_message, sql_query, result)
+                yield f"data: {json.dumps({'final': final})}\n\n"
+                # also yield final payload
+                payload = {
+                    'done': True,
+                    'message': final,
+                    'query': sql_query,
+                    'data': result.get('data', []),
+                    'count': len(result.get('data', []))
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                return
+
+            # After stream ended, compute final summary and emit it
+            final_summary = await self._convert_results_to_natural_language(user_message, sql_query, result)
+            final_payload = {
+                'done': True,
+                'message': final_summary,
+                'query': sql_query,
+                'data': result.get('data', []),
+                'count': len(result.get('data', []))
+            }
+            yield f"data: {json.dumps({'final': final_summary})}\n\n"
+            yield f"data: {json.dumps(final_payload)}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
 # Cache for chat service instances (one per user)
 _chat_services: Dict[str, ChatService] = {}
 

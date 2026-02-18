@@ -1,5 +1,6 @@
 """Chat endpoints for querying stored API data with per-user isolation."""
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from app.schemas import chat as chat_schemas
 from app.services.chat_service import get_chat_service
 from app.services.duckdb_service import get_db
@@ -60,18 +61,32 @@ async def chat_query(
     - "Show tickets with status 'closed'"
     """
     chat_service = get_chat_service(user_id)
-    
+
+    if request.stream:
+        # StreamingResponse expects an async generator yielding bytes/str
+        async def event_generator():
+            async for chunk in chat_service.chat_stream(
+                table_name=request.table_name,
+                user_message=request.message
+            ):
+                # Ensure each chunk ends with double newline per SSE spec
+                if not chunk.endswith("\n\n"):
+                    chunk = chunk + "\n\n"
+                yield chunk
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
     result = await chat_service.chat(
         table_name=request.table_name,
         user_message=request.message
     )
-    
+
     if not result.get("is_success"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result.get("message", "Failed to process query")
         )
-    
+
     return chat_schemas.ChatResponse(**result)
 
 

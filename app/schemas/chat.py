@@ -5,13 +5,13 @@ from typing import List, Dict, Any, Optional
 class ChatInitRequest(BaseModel):
     """Request to initialize chat with API data."""
     table_name: str
-    rpc_name: str = "fn_get_tickets"
+    rpc_name: str = "fn_get_assets"
     
     class Config:
         json_schema_extra = {
             "example": {
-                "table_name": "tickets",
-                "rpc_name": "fn_get_tickets"
+                "table_name": "assets",
+                "rpc_name": "fn_get_assets"
             }
         }
 
@@ -29,12 +29,15 @@ class ChatMessage(BaseModel):
     """A chat message request."""
     table_name: str
     message: str
+    # If true, request a streaming response (SSE). Defaults to false.
+    stream: Optional[bool] = False
     
     class Config:
         json_schema_extra = {
             "example": {
-                "table_name": "tickets",
-                "message": "Show me all open tickets"
+                "table_name": "assets",
+                "message": "Show me category-wise asset count",
+                "stream": False
             }
         }
 
