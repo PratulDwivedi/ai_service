@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    
+    openai_api_key: str = ""  # Optional for chat functionality
+    duckdb_path: str = ":memory:"  # In-memory by default
 
     model_config = SettingsConfigDict(
         env_file=f".env.{ENVIRONMENT}",

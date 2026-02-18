@@ -6,6 +6,9 @@ pydantic[email]
 pydantic-settings
 email-validator
 httpx
+duckdb>=0.9.0
+pandas>=2.0.0
+openai>=1.0.0
 
 # add additional dependencies and pin versions as needed
 
