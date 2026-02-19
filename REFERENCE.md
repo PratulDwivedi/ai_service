@@ -128,13 +128,6 @@ Added packages:
 - `pandas>=2.0.0` - Data manipulation
 - `openai>=1.0.0` - LLM support
 
-### Documentation
-
-1. **QUICKSTART.md** - Get started in 10 minutes
-2. **CHAT_API.md** - Complete API reference
-3. **IMPLEMENTATION_SUMMARY.md** - Technical overview
-4. **REFERENCE.md** - This file
-
 ### Examples
 
 **examples/chat_api_example.py** - Full Python client example with:
@@ -455,7 +448,6 @@ print(response.json())
 
 1. ✅ Review [QUICKSTART.md](./QUICKSTART.md)
 2. ✅ Try [examples/chat_api_example.py](./examples/chat_api_example.py)
-3. ✅ Read full docs: [CHAT_API.md](./CHAT_API.md)
 4. ✅ Build your frontend
 5. ✅ Customize for your use cases
 
