@@ -63,7 +63,6 @@ This project is a production‑grade FastAPI template with:
 
 
 7. **API endpoints**
-   * `GET /health` – health check
    * `POST /auth/signup` – register user
    * `POST /auth/login` – authenticate
 

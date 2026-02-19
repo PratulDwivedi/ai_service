@@ -142,67 +142,6 @@ Authorization: Bearer <your_access_token>
 }
 ```
 
-## Usage Examples
-
-### Example 1: Basic Setup and Query
-
-```bash
-# 1. Authenticate and get token
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}' \
-  | jq -r '.access_token')
-
-# 2. Initialize chat with tickets data
-curl -X POST http://localhost:8000/api/chat/init \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table_name": "tickets",
-    "rpc_name": "fn_get_tickets"
-  }'
-
-# 3. Query the data
-curl -X POST http://localhost:8000/api/chat/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table_name": "tickets",
-    "message": "How many open tickets are there?"
-  }'
-```
-
-### Example 2: Advanced Queries
-
-```bash
-# Query: Get all tickets assigned to a specific user
-curl -X POST http://localhost:8000/api/chat/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table_name": "tickets",
-    "message": "Show me all tickets assigned to alice@example.com"
-  }'
-
-# Query: Get latest tickets
-curl -X POST http://localhost:8000/api/chat/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table_name": "tickets",
-    "message": "Show the 5 most recent tickets"
-  }'
-
-# Query: Get ticket count by status
-curl -X POST http://localhost:8000/api/chat/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "table_name": "tickets",
-    "message": "How many tickets are in each status?"
-  }'
-```
-
 ## Supported Natural Language Queries
 
 The chat service supports various natural language query patterns:
@@ -320,29 +259,6 @@ Example error response:
 - API keys stored in environment variables
 - No sensitive data logged
 
-## Extending
-
-### Adding New RPC Functions
-
-Simply call init with a different `rpc_name`:
-
-```json
-{
-  "table_name": "projects",
-  "rpc_name": "fn_get_projects"
-}
-```
-
-### Custom Table Names
-
-Use meaningful table names:
-
-```json
-{
-  "table_name": "support_tickets",
-  "rpc_name": "fn_get_tickets"
-}
-```
 
 ### Direct SQL Queries
 
